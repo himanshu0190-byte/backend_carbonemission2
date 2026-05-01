@@ -16,7 +16,7 @@ CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Place your live MongoDB URI here. Get this from your cloud provider (e.g., MongoDB Atlas).
 # If this variable is not set on your hosting platform, it defaults to localhost.
-MONGO_URI = os.environ.get("mongodb+srv://hj7733324_db_user:Nl3e5W4KUEuGsEF0@clustercarbon.lfuitwb.mongodb.net/?appName=Clustercarbon")
+MONGO_URI = os.environ.get("MONGO_URI", "mongodb+srv://hj7733324_db_user:Nl3e5W4KUEuGsEF0@clustercarbon.lfuitwb.mongodb.net/?appName=Clustercarbon")
 
 DB_NAME = "carbon_db"
 COLLECTION_NAME = "records"
