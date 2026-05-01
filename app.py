@@ -6,6 +6,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, OperationFailure
+from ml_models import ModelManager
 
 app = Flask(__name__)
 
@@ -44,6 +45,9 @@ def connect_to_mongo():
 
 # Perform initial connection
 connect_to_mongo()
+
+# --- MACHINE LEARNING MODELS ---
+ml_manager = ModelManager()
 
 # --- REAL-TIME DATA SIMULATION ---
 def get_sensor_data():
@@ -114,13 +118,25 @@ def data():
             print(f"Failed to save record to MongoDB: {e}")
             # Do not crash the API, but log the error
 
+    # Process through ML models
+    ml_results = ml_manager.process_datapoint(sensor, emission)
+
     return jsonify({
         "sensor": sensor,
         "emission": emission,
         "status": "SAFE" if emission < 300 else "UNSAFE",
         "suggestions": suggestions,
         "db_connected": db_connected,
-        "factor": factor
+        "factor": factor,
+        "ml": {
+            "prediction": ml_results['prediction'],
+            "next_hour_forecast": ml_results['next_hour_forecast'],
+            "is_anomaly": ml_results['is_anomaly'],
+            "anomaly_score": ml_results['anomaly_score'],
+            "ai_recommendations": ml_results['recommendations'],
+            "savings_potential": ml_results['savings_potential'],
+            "model_status": ml_results['model_status']
+        }
     })
 
 @app.route("/api/health")
@@ -129,6 +145,47 @@ def health():
         "status": "ok",
         "db_connected": mongo_ok,
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+    })
+
+@app.route("/api/ml/status")
+def ml_status():
+    """Returns the status of ML models and training progress."""
+    return jsonify({
+        "predictor_trained": ml_manager.predictor.model_trained,
+        "anomaly_detector_trained": ml_manager.anomaly_detector.model_trained,
+        "data_collected": len(ml_manager.predictor.data_buffer),
+        "min_data_required": ml_manager.predictor.lookback_window,
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
+    })
+
+@app.route("/api/ml/forecast")
+def forecast():
+    """Returns a detailed forecast for the next hour."""
+    sensor_data = get_sensor_data()
+    forecast_result = ml_manager.predictor.predict_next_hour(sensor_data)
+    
+    return jsonify({
+        "forecast": forecast_result,
+        "generated_at": datetime.datetime.utcnow().isoformat() + "Z"
+    })
+
+@app.route("/api/ml/optimization")
+def optimization():
+    """Returns optimization insights and potential savings."""
+    sensor_data = get_sensor_data()
+    factor = get_dynamic_factor()
+    emission = round(sensor_data["power"] * factor, 1)
+    
+    recommendations = ml_manager.optimizer.get_optimization_recommendations(
+        sensor_data, emission
+    )
+    savings = ml_manager.optimizer.calculate_savings_potential()
+    
+    return jsonify({
+        "current_emission": emission,
+        "recommendations": recommendations,
+        "savings_potential": savings,
+        "generated_at": datetime.datetime.utcnow().isoformat() + "Z"
     })
 
 # --- RUN THE APP ---
