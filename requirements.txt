@@ -2,3 +2,7 @@ Flask
 pymongo
 flask-cors
 gunicorn
+scikit-learn
+numpy
+pandas
+joblib
